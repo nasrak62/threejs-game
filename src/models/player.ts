@@ -45,10 +45,10 @@ export default class Player {
     mouseVector?: THREE.Vector2;
     machineGun?: MachineGun;
     rayCaster?: THREE.Raycaster;
-    particlesBufferAttribute: THREE.BufferAttribute;
-    particlesBufferAttributeReference: THREE.BufferAttribute;
-    uShouldMoveToTarget: boolean;
-    wasInited: boolean;
+    particlesBufferAttribute?: THREE.BufferAttribute;
+    particlesBufferAttributeReference?: THREE.BufferAttribute;
+    uShouldMoveToTarget?: boolean;
+    wasInited?: boolean;
 
     constructor() {
         if (instance) {
@@ -103,7 +103,7 @@ export default class Player {
         return player;
     }
 
-    releaseMouse(e: MouseEvent) {
+    releaseMouse() {
         this.machineGun!.status = 'finish';
     }
 
@@ -185,8 +185,8 @@ export default class Player {
 
         const gltf = await loadGltf(this.gltfLoader!, '/models/test3.glb');
 
-        gltf.scene.traverse((child) => {
-            if (child.isMesh) {
+        gltf.scene.traverse((child: any) => {
+            if (child?.isMesh) {
                 child.material = this.shaderMaterial;
             }
         });
@@ -307,16 +307,16 @@ export default class Player {
         const count = particlesArray.length;
 
         for (let index = 0; index < Math.floor(count / 3); index += 1) {
-            this.particlesBufferAttribute.setXYZ(
+            this.particlesBufferAttribute!.setXYZ(
                 index,
-                this.particlesBufferAttributeReference.getX(index),
-                this.particlesBufferAttributeReference.getY(index),
-                this.particlesBufferAttributeReference.getZ(index),
+                this.particlesBufferAttributeReference!.getX(index),
+                this.particlesBufferAttributeReference!.getY(index),
+                this.particlesBufferAttributeReference!.getZ(index),
             );
         }
     }
 
-    resetParticlesMeshPosition(deltaTime: number) {
+    resetParticlesMeshPosition() {
         const distance = this.particles!.position.distanceToSquared(
             this.mesh!.position,
         );
@@ -332,14 +332,14 @@ export default class Player {
         }
     }
 
-    defaultFlow(deltaTime: number) {
+    defaultFlow() {
         if (this.isAttack) {
             this.resetInnerParticlesPosition();
 
             return;
         }
 
-        this.resetParticlesMeshPosition(deltaTime);
+        this.resetParticlesMeshPosition();
 
         const particlesArray =
             this.particles!.geometry.attributes.position.array;
@@ -347,13 +347,13 @@ export default class Player {
         const count = particlesArray.length;
 
         for (let index = 0; index < Math.floor(count / 3); index += 1) {
-            const value = this.particlesBufferAttribute.getY(index);
+            const value = this.particlesBufferAttribute!.getY(index);
             const shouldResetY = value >= 2;
 
             if (shouldResetY) {
-                this.particlesBufferAttribute.setY(index, -2);
+                this.particlesBufferAttribute!.setY(index, -2);
             } else {
-                this.particlesBufferAttribute.setY(
+                this.particlesBufferAttribute!.setY(
                     index,
                     Math.random() * 0.1 + value,
                 );
@@ -361,22 +361,22 @@ export default class Player {
         }
     }
 
-    handleAttack(deltaTime: number) {
-        this.isAttack = this.machineGun!.start(deltaTime);
+    handleAttack() {
+        this.isAttack = this.machineGun!.start();
 
         if (!this.isAttack) {
             this.resetInnerParticlesPosition();
         }
     }
 
-    handleMovementFlow(deltaTime: number) {
+    handleMovementFlow() {
         if (this.isAttack) {
-            this.handleAttack(deltaTime);
+            this.handleAttack();
 
             return;
         }
 
-        this.defaultFlow(deltaTime);
+        this.defaultFlow();
     }
 
     async update(deltaTime: number, elapsedTime: number) {
@@ -384,7 +384,7 @@ export default class Player {
             this.mixer.update(deltaTime);
         }
 
-        this.handleMovementFlow(deltaTime);
+        this.handleMovementFlow();
         this.updateMesh(deltaTime);
 
         this.particlesMaterial.userData.uTime.value = elapsedTime;

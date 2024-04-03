@@ -1,5 +1,6 @@
 import * as THREE from 'three';
-import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls';
+// ts-ignore
+import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 
 import { loadResizedTexture, setGeometryUv2 } from '../utils/textures';
@@ -25,6 +26,7 @@ export default class World {
     player?: Player;
     gltfLoader?: GLTFLoader;
     wasInit: any;
+    directionalLightHelper?: THREE.DirectionalLightHelper;
 
     constructor() {
         if (instance) {
@@ -99,7 +101,7 @@ export default class World {
 
     initControls() {
         this.controls = new OrbitControls(
-            this.camera,
+            this.camera!,
             this.renderer!.domElement,
         );
     }

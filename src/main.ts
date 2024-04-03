@@ -16,7 +16,7 @@ async function animate() {
 
     const deltaTime = Math.max(currentTime - startTime, 14);
 
-    world!.controls.update();
+    world!.controls!.update();
     await world!.player!.update(deltaTime, elapsedTime);
 
     requestAnimationFrame(animate);

@@ -1,6 +1,5 @@
 import * as THREE from 'three';
 import Player from '../../player';
-import { lerp } from 'three/src/math/MathUtils.js';
 import gsap from 'gsap';
 
 export default class MachineGun {
@@ -36,11 +35,11 @@ export default class MachineGun {
         this.camera = player.camera;
         this.originalPositions = player.originalPositions;
         this.mousePosition = player.mousePosition;
-        this.particlesBufferAttribute = player.particlesBufferAttribute;
+        this.particlesBufferAttribute = player.particlesBufferAttribute!;
         this.particlesBufferAttributeReference =
-            player.particlesBufferAttributeReference;
+            player.particlesBufferAttributeReference!;
 
-        this.uShouldMoveToTarget = player.uShouldMoveToTarget;
+        this.uShouldMoveToTarget = player.uShouldMoveToTarget!;
         this.particlesMaterial = player.particlesMaterial;
         this.scene = player.scene;
 
@@ -57,7 +56,7 @@ export default class MachineGun {
         this.meshes = {};
     }
 
-    moveParticlesIntoPosition(deltaTime: number) {
+    moveParticlesIntoPosition() {
         const newPosition = new THREE.Vector3().copy(this.mesh!.position);
 
         const direction = new THREE.Vector3()
@@ -146,9 +145,9 @@ export default class MachineGun {
         player.isAttack = false;
     }
 
-    start(deltaTime: number) {
+    start() {
         if (this.status === 'ready') {
-            this.moveParticlesIntoPosition(deltaTime);
+            this.moveParticlesIntoPosition();
             return true;
         }
 
