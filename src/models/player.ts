@@ -161,7 +161,7 @@ export default class Player {
     async initAuraMesh() {
         this.currentTexture = await loadTexture(
             this.textureLoader!,
-            '/textures/bernard-hermant-qi-H70ga93s-unsplash.jpg',
+            './textures/bernard-hermant-qi-H70ga93s-unsplash.jpg',
         );
 
         this.shaderMaterial = new THREE.ShaderMaterial({
@@ -183,7 +183,7 @@ export default class Player {
             },
         });
 
-        const gltf = await loadGltf(this.gltfLoader!, '/models/test3.glb');
+        const gltf = await loadGltf(this.gltfLoader!, './models/test3.glb');
 
         gltf.scene.traverse((child: any) => {
             if (child?.isMesh) {
