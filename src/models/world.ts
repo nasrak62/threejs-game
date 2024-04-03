@@ -127,25 +127,25 @@ export default class World {
     async initFloor() {
         const grassColorTexture = await loadResizedTexture(
             this.textureLoader!,
-            '/textures/grass/color.jpg',
+            './textures/grass/color.jpg',
             8,
         );
 
         const grassNormalTexture = await loadResizedTexture(
             this.textureLoader!,
-            '/textures/grass/normal.jpg',
+            './textures/grass/normal.jpg',
             8,
         );
 
         const grassRoughnessTexture = await loadResizedTexture(
             this.textureLoader!,
-            '/textures/grass/roughness.jpg',
+            './textures/grass/roughness.jpg',
             8,
         );
 
         const grassAmbientOcclusionTexture = await loadResizedTexture(
             this.textureLoader!,
-            '/textures/grass/ambientOcclusion.jpg',
+            './textures/grass/ambientOcclusion.jpg',
             8,
         );
 
