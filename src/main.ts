@@ -1,7 +1,9 @@
 import './style.css';
 import World from './models/world';
+import { initPhysics } from './physics';
 
 let world: World | null = null;
+// let RAPIER: any = null;
 const startTime = Date.now();
 
 async function start() {
@@ -11,16 +13,28 @@ async function start() {
 }
 
 async function animate() {
-    const elapsedTime = world!.clock!.getElapsedTime();
-    const currentTime = Date.now();
+    try {
+        if (!world || !world.physicsWorld) {
+            return;
+        }
 
-    const deltaTime = Math.max(currentTime - startTime, 14);
+        const elapsedTime = world.clock?.getElapsedTime();
+        const currentTime = Date.now();
 
-    world!.controls!.update();
-    await world!.player!.update(deltaTime, elapsedTime);
+        const deltaTime = Math.max(currentTime - startTime, 14);
 
-    requestAnimationFrame(animate);
-    world!.renderer!.render(world!.scene!, world!.camera!);
+        // world!.controls!.update();
+        world.physicsWorld.step();
+        await world.player?.update(deltaTime, elapsedTime || 0);
+
+        requestAnimationFrame(animate);
+
+        if (world?.scene && world?.camera) {
+            world?.renderer?.render(world?.scene, world?.camera);
+        }
+    } catch (error) {
+        console.log(error);
+    }
 }
 
 start();

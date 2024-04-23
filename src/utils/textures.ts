@@ -23,9 +23,13 @@ export const loadTexture = async (
     path: string,
 ): Promise<THREE.Texture> => {
     return new Promise((resolve) => {
-        textureLoader.load(path, (data) => {
-            resolve(data);
-        });
+        try {
+            textureLoader.load(path, (data) => {
+                resolve(data);
+            });
+        } catch (error) {
+            console.log(error);
+        }
     });
 };
 
@@ -34,11 +38,15 @@ export const loadResizedTexture = async (
     path: string,
     size: number,
 ) => {
-    const currentTexture = await loadTexture(textureLoader, path);
+    try {
+        const currentTexture = await loadTexture(textureLoader, path);
 
-    currentTexture.repeat.set(size, size);
-    currentTexture.wrapS = THREE.RepeatWrapping;
-    currentTexture.wrapT = THREE.RepeatWrapping;
+        currentTexture.repeat.set(size, size);
+        currentTexture.wrapS = THREE.RepeatWrapping;
+        currentTexture.wrapT = THREE.RepeatWrapping;
 
-    return currentTexture;
+        return currentTexture;
+    } catch (error) {
+        console.log(error);
+    }
 };

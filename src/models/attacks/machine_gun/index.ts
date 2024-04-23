@@ -2,45 +2,44 @@ import * as THREE from 'three';
 import Player from '../../player';
 import gsap from 'gsap';
 
+let instance: MachineGun | null = null;
+
 export default class MachineGun {
-    particles?: THREE.Points<
-        THREE.BufferGeometry<THREE.NormalBufferAttributes>,
-        THREE.PointsMaterial
-    >;
     originalPositions?: Float32Array;
     mousePosition?: THREE.Vector3;
-    status: string;
-    mesh:
-        | THREE.Mesh<
-              THREE.SphereGeometry,
-              THREE.MeshStandardMaterial,
-              THREE.Object3DEventMap
-          >
-        | undefined;
-    particlesBufferAttribute: THREE.BufferAttribute;
-    particlesBufferAttributeReference: THREE.BufferAttribute;
-    resetInnerParticlesPosition: () => void;
+    status?: string;
+    mesh: THREE.Group<THREE.Object3DEventMap>;
+    particlesBufferAttribute?: THREE.BufferAttribute;
+    particlesBufferAttributeReference?: THREE.BufferAttribute;
+    resetInnerParticlesPosition?: () => void;
     camera: THREE.PerspectiveCamera | undefined;
-    uShouldMoveToTarget: boolean;
+    uShouldMoveToTarget?: boolean;
     particlesMaterial: any;
-    scene: THREE.Scene | undefined;
-    tweens: gsap.core.Tween[];
+    scene?: THREE.Scene;
+    tweens?: gsap.core.Tween[];
     meshes: any;
+    player: Player;
+    particles: THREE.Points<
+        THREE.BufferGeometry<THREE.NormalBufferAttributes>,
+        THREE.MeshStandardMaterial
+    >;
 
-    constructor() {
-        const player = new Player();
-
-        this.particles = player.particles;
-        this.mesh = player.mesh;
+    constructor(player: Player) {
+        this.player = player;
+        this.particles = player.particlesShield!.mesh!;
+        this.mesh = player.mesh!;
         this.camera = player.camera;
-        this.originalPositions = player.originalPositions;
-        this.mousePosition = player.mousePosition;
-        this.particlesBufferAttribute = player.particlesBufferAttribute!;
+        this.originalPositions = player.particlesShield!.originalPositions;
+        this.mousePosition = player.mouseHandler!.mousePosition;
+
+        this.particlesBufferAttribute =
+            player.particlesShield!.particlesBufferAttribute;
+
         this.particlesBufferAttributeReference =
-            player.particlesBufferAttributeReference!;
+            player.particlesShield!.particlesBufferAttributeReference;
 
         this.uShouldMoveToTarget = player.uShouldMoveToTarget!;
-        this.particlesMaterial = player.particlesMaterial;
+        this.particlesMaterial = player.particlesShield!.material;
         this.scene = player.scene;
 
         this.status = 'ready';
@@ -51,9 +50,20 @@ export default class MachineGun {
         (window as any).particlesBufferAttributeReference =
             this.particlesBufferAttributeReference;
 
-        this.resetInnerParticlesPosition = player.resetInnerParticlesPosition;
         this.tweens = [];
         this.meshes = {};
+    }
+
+    static async init(player: Player) {
+        if (instance) {
+            return instance;
+        }
+
+        const machine_gun = new MachineGun(player);
+
+        instance = machine_gun;
+
+        return machine_gun;
     }
 
     moveParticlesIntoPosition() {
@@ -63,9 +73,9 @@ export default class MachineGun {
             .subVectors(this.mousePosition!, newPosition)
             .normalize();
 
-        direction.y += 2;
+        direction.y += this.player.height!;
         newPosition.addScaledVector(direction, 4);
-        this.resetInnerParticlesPosition();
+        this.player.particlesShield?.resetGeometryPosition();
 
         gsap.to(this.particles!.position, {
             x: newPosition.x,
@@ -120,15 +130,13 @@ export default class MachineGun {
                 },
             });
 
-            this.tweens.push(tween);
+            this.tweens!.push(tween);
         }
     }
 
     handleFinish() {
-        const player = new Player();
-
-        if (this.tweens.length) {
-            this.tweens.forEach((tween) => {
+        if (this.tweens!.length) {
+            this.tweens!.forEach((tween) => {
                 tween.kill();
             });
         }
@@ -142,7 +150,7 @@ export default class MachineGun {
             mesh.clear();
         }
 
-        player.isAttack = false;
+        this.player!.isAttack = false;
     }
 
     start() {

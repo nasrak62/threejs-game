@@ -5,8 +5,14 @@ export const loadGltf = async (
     path: string,
 ): Promise<GLTF> => {
     return new Promise((resolve) => {
-        gltfLoader.load(path, (gltf) => {
-            resolve(gltf);
-        });
+        try {
+            gltfLoader.load(path, (gltf) => {
+                resolve(gltf);
+            });
+        } catch (error) {
+            console.log({ error });
+
+            resolve(null as any);
+        }
     });
 };

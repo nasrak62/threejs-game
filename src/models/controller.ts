@@ -1,5 +1,9 @@
 import * as THREE from 'three';
 import Player from './player';
+import MouseHandler from './mouse_handler';
+// import { PointerLockControls } from 'three/addons/controls/PointerLockControls.js';
+import * as RAPIER from '@dimforge/rapier3d';
+import ThirdPersonCamera from './third_person_camera';
 
 let instance: Controller | null = null;
 
@@ -10,33 +14,56 @@ export default class Controller {
     isBackwards?: boolean;
     isRight?: boolean;
     isLeft?: boolean;
-    velocity?: number;
     isJump?: boolean;
     isJumpLoad?: boolean;
-    jumpHightMax?: number;
-    meshFloorTouchY?: number;
     height?: number;
+    camera?: THREE.PerspectiveCamera;
+    scene?: THREE.Scene;
+    pointerLocked: boolean;
+    renderer?: THREE.WebGLRenderer;
+    distance: number;
+    rigidBody?: RAPIER.RigidBody;
+    followTarget = new THREE.Object3D();
+    thirdPersonCamera?: ThirdPersonCamera;
+    vector = new THREE.Vector3();
+    inputVelocity = new THREE.Vector3();
+    euler = new THREE.Euler();
+    quaternion = new THREE.Quaternion();
+    rotationMatrix = new THREE.Matrix4();
+    targetQuaternion = new THREE.Quaternion();
 
     constructor() {
-        if (instance) {
-            return instance;
-        }
-
-        instance = this;
-
-        const player = new Player();
-
-        this.height = player.height;
         this.isForwards = false;
         this.isBackwards = false;
         this.isRight = false;
         this.isLeft = false;
         this.isJump = false;
         this.isJumpLoad = false;
-        this.jumpHightMax = 5;
-        this.velocity = 0.00002;
-        this.meshFloorTouchY = this.height! / 2.0 || 1;
+        this.targetQuaternion = new THREE.Quaternion();
+        this.distance = 0;
+        this.pointerLocked = false;
         this.initListeners();
+    }
+
+    static async init(player: Player) {
+        if (instance) {
+            return instance;
+        }
+
+        const controller = new Controller();
+
+        controller.height = player.height;
+        controller.camera = player.camera;
+        controller.scene = player.scene;
+        controller.renderer = player.renderer;
+        controller.thirdPersonCamera = player.thirdPersonCamera;
+        controller.rigidBody = player.rigidBody;
+
+        controller.scene.add(controller.followTarget);
+
+        instance = controller;
+
+        return controller;
     }
 
     handleKeyDown(event: KeyboardEvent) {
@@ -56,8 +83,8 @@ export default class Controller {
             this.isLeft = true;
         }
 
-        if (event.key === ' ' && !this.isJumpLoad) {
-            this.isJumpLoad = true;
+        if (event.key === ' ' && !this.isJump) {
+            this.isJump = true;
         }
     }
 
@@ -75,9 +102,8 @@ export default class Controller {
             this.isLeft = false;
         }
 
-        if (event.key === ' ' && this.isJumpLoad) {
-            this.isJumpLoad = false;
-            this.isJump = true;
+        if (event.key === ' ') {
+            this.isJump = false;
         }
     }
 
@@ -86,56 +112,92 @@ export default class Controller {
         window.addEventListener('keyup', this.handleKeyUp.bind(this));
     }
 
-    updateMesh(
-        mesh: THREE.Mesh<
-            THREE.SphereGeometry,
-            THREE.MeshStandardMaterial,
-            THREE.Object3DEventMap
-        >,
-        deltaTime: number,
-    ) {
-        let z = mesh.position.z;
-        let x = mesh.position.x;
-        let y = mesh.position.y;
+    updateMesh(mesh: THREE.Group<THREE.Object3DEventMap>, deltaTime: number) {
+        if (!mesh || !this.rigidBody || !this.thirdPersonCamera) {
+            return;
+        }
 
-        let rotationX = mesh.rotation.x;
-        let rotationY = mesh.rotation.y;
-        let rotationZ = mesh.rotation.z;
+        // camera.getWorldDirection(dir);
 
-        const effectiveVelocity = deltaTime * this.velocity!;
+
+        this.rigidBody.resetForces(true);
+
+        this.inputVelocity.set(0, 0, 0);
+        let limit = 1;
+        const speed = 1;
 
         if (this.isForwards) {
-            z -= effectiveVelocity;
-            rotationZ -= effectiveVelocity;
+            this.inputVelocity.z = speed;
+            limit = 9.5;
         }
 
         if (this.isBackwards) {
-            z += effectiveVelocity;
-            rotationZ += effectiveVelocity;
-        }
-
-        if (this.isRight) {
-            x += effectiveVelocity;
-            rotationX += effectiveVelocity;
+            this.inputVelocity.z = -speed;
+            limit = 9.5;
         }
 
         if (this.isLeft) {
-            x -= effectiveVelocity;
-            rotationX -= effectiveVelocity;
-        }
-        if (this.isJump && y < this.jumpHightMax!) {
-            y += effectiveVelocity;
-        } else if (this.isJump && y >= this.jumpHightMax!) {
-            this.isJump = false;
-        } else if (!this.isJump && y > this.meshFloorTouchY!) {
-            y -= Math.sqrt(2 * GRAVITY * y) * deltaTime * 0.000005;
+            this.inputVelocity.x = speed;
+            limit = 9.5;
         }
 
-        if (y <= this.meshFloorTouchY!) {
-            y = this.meshFloorTouchY!;
+        if (this.isRight) {
+            this.inputVelocity.x = -speed;
+            limit = 9.5;
         }
 
-        mesh.position.set(x, y, z);
-        mesh.rotation.set(rotationX, rotationY, rotationZ);
+        if (this.isJump) {
+            this.inputVelocity.y = 20 * speed;
+        }
+
+        this.inputVelocity.setLength(deltaTime * limit * 0.001); // limits horizontal movement
+
+        // this.euler.y = this.thirdPersonCamera!.yaw.rotation.y;
+        // this.quaternion.setFromEuler(this.euler);
+        // this.inputVelocity.applyQuaternion(this.quaternion);
+        this.rigidBody!.applyImpulse(this.inputVelocity, true);
+
+        // // The followCam will lerp towards the followTarget position.
+        // const translation = this.rigidBody!.translation();
+
+        // this.followTarget.position.set(
+        //     translation.x,
+        //     translation.y,
+        //     translation.z,
+        // ); // Copy the capsules position to followTarget
+        // this.followTarget.getWorldPosition(this.vector); // Put followTargets new world position into a vector
+        // this.thirdPersonCamera!.pivot.position.lerp(
+        //     this.vector,
+        //     deltaTime * 10 * 0.000001,
+        // ); // lerp the followCam pivot towards the vector
+
+        // // Eve model also lerps towards the capsules position, but independently of the followCam
+        // mesh.position.lerp(this.vector, deltaTime * 20);
+
+        // // // Also turn Eve to face the direction of travel.
+        // // // First, construct a rotation matrix based on the direction from the followTarget to Eve
+        // this.rotationMatrix.lookAt(
+        //     this.followTarget.position,
+        //     mesh.position as THREE.Vector3,
+        //     mesh.up as THREE.Vector3,
+        // );
+        // this.targetQuaternion.setFromRotationMatrix(this.rotationMatrix); // creating a quaternion to rotate Eve, since eulers can suffer from gimbal lock
+
+        // // Next, get the distance from the Eve model to the followTarget
+        // const distance = mesh.position.distanceTo(this.followTarget.position);
+
+        // // If distance is higher than some espilon, and Eves quaternion isn't the same as the targetQuaternion, then rotate towards the targetQuaternion.
+        // if (
+        //     (distance as number) > 0.0001 &&
+        //     !mesh.quaternion.equals(this.targetQuaternion)
+        // ) {
+        //     this.targetQuaternion.z = 0; // so that it rotates around the Y axis
+        //     this.targetQuaternion.x = 0; // so that it rotates around the Y axis
+        //     this.targetQuaternion.normalize(); // always normalise quaternions before use.
+        //     mesh.quaternion.rotateTowards(
+        //         this.targetQuaternion,
+        //         deltaTime * 20,
+        //     );
+        // }
     }
 }
